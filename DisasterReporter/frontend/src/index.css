@@ -65,3 +65,23 @@ button:focus-visible {
     color: #747bff;
   }
 }
+
+.flash-message {
+    position: fixed; /* Fixed position to stay in view */
+    top: 20px; /* Distance from the top */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Adjust to center */
+    background-color: #4caf50; /* Green background */
+    color: white; /* White text */
+    padding: 15px 30px; /* Padding for spacing */
+    border-radius: 5px; /* Rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Shadow for depth */
+    z-index: 1000; /* Ensure it appears above other elements */
+    transition: opacity 0.5s ease; /* Smooth transition for fading */
+    opacity: 1; /* Start fully visible */
+}
+
+/* Optional: Fade out effect */
+.flash-message.fade-out {
+    opacity: 0; /* Fade out */
+}

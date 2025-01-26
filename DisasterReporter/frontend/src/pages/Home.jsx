@@ -1,8 +1,10 @@
 // Home.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import NewsCard from "../components/NewsCard";
 import { Button } from "../components/ui/button";
 // import { Carousel } from "react-responsive-carousel";
+import { useAuth } from '../context/AuthContext';
 
 const Home = () => {
   const [formPopup, setFormPopup] = useState(false);
@@ -11,6 +13,24 @@ const Home = () => {
   const [injuries, setInjuries] = useState(0);
   const [missingPersons, setMissingPersons] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [coordinates, setCoordinates] = useState({ lat: null, lng: null });
+  const [showFlash, setShowFlash] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const location = useLocation();
+  const flashMessage = location.state?.flashMessage; // Access the flash message from location state
+
+  useEffect(() => {
+    if (flashMessage) {
+      setShowFlash(true);
+      const timer = setTimeout(() => {
+        setShowFlash(false);
+      }, 3000); // Show for 3 seconds
+
+      return () => clearTimeout(timer); // Cleanup timer on unmount
+    }
+  }, [flashMessage]);
 
   const toggleFormPopup = () => setFormPopup(!formPopup);
 
@@ -42,8 +62,57 @@ const Home = () => {
     e.target.value = '';
   };
 
+  const detectLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoordinates({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+      },
+      (error) => {
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            alert("Location permission denied");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            alert("Location information unavailable");
+            break;
+          case error.TIMEOUT:
+            alert("Location request timed out");
+            break;
+          default:
+            alert("An unknown error occurred");
+        }
+      }
+    );
+  };
+
+  const handleReportClick = () => {
+    if (!user) {
+        // Redirect to login or show a message
+        alert("You must be logged in to report a disaster.");
+        navigate('/login'); // Redirect to login page
+    } else {
+        // Open the report form modal
+        setFormPopup(true);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4">
+      {/* Display flash message if it exists */}
+      {showFlash && (
+        <div className={`flash-message ${!showFlash ? 'fade-out' : ''}`}>
+          {flashMessage}
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="text-center py-20 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg mt-8 text-white">
         <h1 className="text-4xl font-bold mb-4">Welcome to Disaster Insights</h1>
@@ -52,7 +121,7 @@ const Home = () => {
         </p>
         <Button 
           className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg px-8 py-3 font-semibold shadow-md transition-all duration-200" 
-          onClick={toggleFormPopup}
+          onClick={handleReportClick}
         >
           Report Disaster
         </Button>
@@ -82,8 +151,8 @@ const Home = () => {
 
       {/* Form Popup */}
       {formPopup && (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center overflow-y-auto p-4">
-          <div className="bg-white p-8 rounded-lg w-11/12 max-w-3xl">
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-start overflow-y-auto p-4">
+          <div className="bg-white p-8 rounded-lg w-11/12 max-w-3xl my-8">
             <h3 className="text-2xl font-bold mb-2 text-center text-blue-600">Disaster Report Form</h3>
             <p className="text-gray-600 mb-6 text-center">Please provide accurate information to help us respond effectively</p>
             
@@ -93,14 +162,18 @@ const Home = () => {
                 <h4 className="text-lg font-semibold text-gray-700 border-b pb-2">Basic Information</h4>
                 <div>
                   <label className="block font-medium mb-2">Type of Disaster*</label>
-                  <select className="w-full p-2 border rounded-md bg-white text-gray-900" required>
-                    <option value="">Select Disaster Type</option>
-                    <option value="flood">Flood</option>
-                    <option value="earthquake">Earthquake</option>
-                    <option value="fire">Fire</option>
-                    <option value="landslide">Landslide</option>
-                    <option value="cyclone">Cyclone</option>
-                    <option value="gasLeak">Gas Leak</option>
+                  <select 
+                    className="w-full p-2 border rounded-md bg-white text-gray-900 appearance-none cursor-pointer" 
+                    required
+                    style={{ backgroundColor: 'white' }}
+                  >
+                    <option value="" className="bg-white text-gray-900">Select Disaster Type</option>
+                    <option value="flood" className="bg-white text-gray-900">Flood</option>
+                    <option value="earthquake" className="bg-white text-gray-900">Earthquake</option>
+                    <option value="fire" className="bg-white text-gray-900">Fire</option>
+                    <option value="landslide" className="bg-white text-gray-900">Landslide</option>
+                    <option value="cyclone" className="bg-white text-gray-900">Cyclone</option>
+                    <option value="gasLeak" className="bg-white text-gray-900">Gas Leak</option>
                   </select>
                 </div>
               </div>
@@ -120,12 +193,23 @@ const Home = () => {
                 </div>
                 <div>
                   <label className="block font-medium mb-2">Location</label>
-                  <button type="button" className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                    </svg>
-                    Auto-detect Location
-                  </button>
+                  <div className="space-y-2">
+                    <button 
+                      type="button" 
+                      className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 flex items-center gap-2"
+                      onClick={detectLocation}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
+                      Auto-detect Location
+                    </button>
+                    {coordinates.lat && coordinates.lng && (
+                      <p className="text-sm text-gray-600">
+                        Latitude: {coordinates.lat.toFixed(6)}, Longitude: {coordinates.lng.toFixed(6)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
